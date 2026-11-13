@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+data/
+*.sqlite3*
+*.wav
+*.mp3
+*.zip
+.DS_Store
+.coverage

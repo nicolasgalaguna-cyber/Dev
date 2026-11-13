@@ -1,0 +1,48 @@
+services:
+  radio:
+    build:
+      context: .
+      target: radio
+    environment:
+      RADIO_TOKEN: ${RADIO_TOKEN:?Set RADIO_TOKEN in .env}
+      STATION_TIMEZONE: ${STATION_TIMEZONE:-America/Bogota}
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-astra}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - station:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+  icecast:
+    profiles: [broadcast]
+    build:
+      context: .
+      target: icecast
+    environment:
+      ICECAST_SOURCE_PASSWORD: ${ICECAST_SOURCE_PASSWORD:?Set ICECAST_SOURCE_PASSWORD in .env}
+      ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:?Set ICECAST_ADMIN_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+  bridge:
+    profiles: [broadcast]
+    build:
+      context: .
+      target: radio
+    command: ["python", "scripts/icecast_bridge.py"]
+    environment:
+      ICECAST_SOURCE_PASSWORD: ${ICECAST_SOURCE_PASSWORD:?Set ICECAST_SOURCE_PASSWORD in .env}
+    depends_on:
+      radio:
+        condition: service_healthy
+      icecast:
+        condition: service_started
+    restart: unless-stopped
+volumes:
+  station:
